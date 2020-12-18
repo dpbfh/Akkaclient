@@ -1,0 +1,121 @@
+﻿@page "/smarthome"
+@using Service
+@using AkkaClient
+@using System.Threading;
+@inject HomeService homeService
+
+
+<h1>HomeStatus</h1>
+
+<p>Der HomeState muss selber nachgeladen werden</p>
+
+@if (state == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <h2>HomeState</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>AC</th>
+                <th>MediaStation</th>
+                <th>Temp. (C)</th>
+                <th>Temp. (K)</th>
+                <th>Temp. (F)</th>
+                <th>Blind</th>
+                <th>Weather</th>
+            </tr>
+        </thead>
+        <tbody>
+                <tr>
+                    <td>@(state.AcOn?"Klima anlage läuft" : "Klima anlage Aus")</td>
+                    <td>@(state.MediaStationOn?"Die Mediastation läuft gerade":"Die Media station ist aus")</td>
+                    <td>@(state.TempretureC+"C")</td>
+                    <td>@(state.TempretureK+"K")</td>
+                    <td>@(state.TempretureF+"F")</td>
+
+                    <td>@(state.BlindClosed?"Rolläden sind zu":"Rolläden sind offen")</td>
+                    <td>@(state.Sunny?"Die Sonne lacht":"Die Sonne lacht leider nicht")</td>
+                </tr>
+        </tbody>
+    </table>
+     <button class="btn btn-primary" @onclick="@(e => getHomeState())"> Nachladen</button>
+
+     <hr>
+     <h2> Rolläden Steuerrung</h2>
+    <button class="btn btn-primary" @onclick="@(e => switchBlinds())" disabled="@state.MediaStationOn">   
+        @(state.BlindClosed?"Rolläden öffnen":"Rolläden schließen")
+    </button>
+
+    <hr>
+     <h2> MediaStation Steuerrung</h2>
+    <button class="btn btn-primary" @onclick="@(e => switchMediaStation())">   @(state.MediaStationOn?"MediaStation stoppen":"MediaStation starten") </button>
+     
+     <hr>
+     <h2> Temperatur Setzen</h2>
+    <select class="custom-select"  @bind="tempunit" title="Region is required ">  
+    <option value="Select" selected disabled="disabled">(Temperatur einheit)</option>  
+        @foreach (var temperaturunit in Enum.GetValues(typeof(Temperature)))  
+    {  
+    <option value="@temperaturunit"> @temperaturunit</option>  
+    }  
+    </select>  
+    <RadzenNumeric TValue="double" Placeholder="Type in Temperature"
+     Step="0.5" Change=@(args => OnChange(args)) /> 
+    <button class="btn btn-primary" @onclick="@(e => setTemperature())">   <td>Set Temperatur</td>
+     </button>
+
+
+}
+
+@code {
+    private ImuttableHomeState state;
+    private Temperature tempunit;
+    private double temperatur;
+
+     protected override async Task OnInitializedAsync()
+    {
+        getHomeState();
+    }
+
+    public void getHomeState(){
+       state = homeService.GetHomeState().GetAwaiter().GetResult();
+    }
+
+    public void switchBlinds(){
+
+        if(!state.BlindClosed){
+            homeService.closeBlinds();
+        }else{
+            homeService.openBlinds();
+        }
+        Thread.Sleep(1000);
+        getHomeState();
+    }
+
+    public void switchMediaStation(){
+
+        if(state.MediaStationOn){
+            homeService.stopMediaStation();
+        }else{
+            homeService.startMediaStation();
+        }
+        getHomeState();
+                Thread.Sleep(1000);
+        getHomeState();
+
+    }
+
+     void OnChange(dynamic value)
+    {
+        temperatur = value;
+    }
+
+    public void setTemperature(){
+        homeService.setTemperature(tempunit,temperatur);
+         Thread.Sleep(500);
+        getHomeState();
+    }
+}

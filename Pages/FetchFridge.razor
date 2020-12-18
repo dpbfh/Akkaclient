@@ -1,0 +1,63 @@
+﻿@page "/smartfridge"
+@using Service
+@using AkkaClient
+@using System.Threading;
+@inject Fridgeservice fridgeService
+
+
+<h1>Kühlschrank</h1>
+
+<p>Kühlschrank</p>
+
+@if (state == null)
+{
+    <p><em>Loading...</em></p>
+}
+else
+{
+    <h2>Kühlschrank</h2>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Name</th>
+                <th>Gewicht</th>
+                <th>Preis</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var item in state)
+            {
+                <tr>
+                    <td>@(item.Name)</td>
+                    <td>@(item.WeightInGramm)g</td>
+                    <td>@(item.Prize)</td>
+                    <td>  <button class="btn btn-primary" @onclick="@(e => consumeProduct(item))"> Konsumieren </button> </td>
+                </tr>
+            }
+
+        </tbody>
+    </table>
+     <button class="btn btn-primary" @onclick="@(e => getFridgeState())">Nachladen</button>
+
+
+
+}
+
+@code {
+    private System.Collections.Generic.ICollection<ProductDto> state;
+
+     protected override async Task OnInitializedAsync()
+    {
+        getFridgeState();
+    }
+
+    public void getFridgeState(){
+       state = fridgeService.getInventory().GetAwaiter().GetResult();
+    }
+
+    public void consumeProduct(ProductDto dto){
+        var x =   fridgeService.consumeProduct(dto).GetAwaiter().GetResult();
+        getFridgeState();
+    }
+
+}
